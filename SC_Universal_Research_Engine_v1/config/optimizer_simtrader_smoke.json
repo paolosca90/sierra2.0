@@ -1,0 +1,11 @@
+{
+  "openResultsFolder": false,
+  "replayConfig": {"replaySpeed": 100, "startDate": "2026-10-08", "startTime": "00:00:00.000", "replayMode": 3, "chartsToReplay": 0, "clearExistingTradeSimulationDataForSymbolAndTradeAccount": 1, "skipEmptyPeriods": 1},
+  "logConfig": {"enableLog": true, "enableShowLogOnChart": true, "maxLogLines": 25},
+  "paramConfigs": [
+    {"_name":"REPLAY-only arm", "index":4, "type":"bool", "min":1, "max":1, "increment":0},
+    {"_name":"SL ticks", "index":6, "type":"int", "min":40, "max":60, "increment":20},
+    {"_name":"TP ticks", "index":7, "type":"int", "min":60, "max":80, "increment":20},
+    {"_name":"Minimum score", "index":8, "type":"float", "min":0.3, "max":0.3, "increment":0}
+  ]
+}

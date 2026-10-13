@@ -1,0 +1,9 @@
+[
+  {"scid":"C:/SierraChart/Data/NQM25-CME.scid","start":"2025-02-28","end":"2025-06-12T22:00:00","trade_from":"2025-04-01","trade_to":"2025-06-11"},
+  {"scid":"C:/SierraChart/Data/NQU25-CME.scid","start":"2025-05-30","end":"2025-09-11T22:00:00","trade_from":"2025-06-12","trade_to":"2025-09-10"},
+  {"scid":"C:/SierraChart/Data/NQZ25-CME.scid","start":"2025-08-29","end":"2025-12-11T23:00:00","trade_from":"2025-09-11","trade_to":"2025-12-10"},
+  {"scid":"C:/SierraChart/Data/NQH26-CME.scid","start":"2025-11-28","end":"2026-03-12T22:00:00","trade_from":"2025-12-11","trade_to":"2026-03-11"},
+  {"scid":"C:/SierraChart/Data/NQM26-CME.scid","start":"2026-02-27","end":"2026-06-11T22:00:00","trade_from":"2026-03-12","trade_to":"2026-06-10"},
+  {"scid":"C:/SierraChart/Data/NQU26-CME.scid","start":"2026-05-29","end":"2026-09-10T22:00:00","trade_from":"2026-06-11","trade_to":"2026-09-09"},
+  {"scid":"C:/SierraChart/Data/NQZ26-CME.scid","start":"2026-08-26","end":"2026-10-01T00:00:00","trade_from":"2026-09-10","trade_to":"2026-09-30"}
+]

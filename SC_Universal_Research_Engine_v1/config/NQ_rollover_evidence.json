@@ -1,0 +1,110 @@
+[
+  {
+    "outgoing": "M25",
+    "incoming": "U25",
+    "decision_date": "2025-06-16",
+    "effective_trade_date": "2025-06-17",
+    "outgoing_volume": 336301,
+    "incoming_volume": 420107,
+    "sources": [
+      {
+        "path": "C:\\SierraChart\\Data\\NQM25-CME.dly",
+        "sha256": "fe5d5bdf9b00be0056ae2ba8bb7180c6658441b63845de583d11cf6b95c0b3f3"
+      },
+      {
+        "path": "C:\\SierraChart\\Data\\NQU25-CME.dly",
+        "sha256": "82ceb21094a64e0c7bec3f56e660165b42c0a65993b0b950ddd5721984f7f0bf"
+      }
+    ]
+  },
+  {
+    "outgoing": "U25",
+    "incoming": "Z25",
+    "decision_date": "2025-09-16",
+    "effective_trade_date": "2025-09-17",
+    "outgoing_volume": 211077,
+    "incoming_volume": 431717,
+    "sources": [
+      {
+        "path": "C:\\SierraChart\\Data\\NQU25-CME.dly",
+        "sha256": "82ceb21094a64e0c7bec3f56e660165b42c0a65993b0b950ddd5721984f7f0bf"
+      },
+      {
+        "path": "C:\\SierraChart\\Data\\NQZ25-CME.dly",
+        "sha256": "c3ae57e32cb80993f28dcafa009a94292760ed17f5712e8a77434bbcfddd3767"
+      }
+    ]
+  },
+  {
+    "outgoing": "Z25",
+    "incoming": "H26",
+    "decision_date": "2025-12-15",
+    "effective_trade_date": "2025-12-16",
+    "outgoing_volume": 448073,
+    "incoming_volume": 499257,
+    "sources": [
+      {
+        "path": "C:\\SierraChart\\Data\\NQZ25-CME.dly",
+        "sha256": "c3ae57e32cb80993f28dcafa009a94292760ed17f5712e8a77434bbcfddd3767"
+      },
+      {
+        "path": "C:\\SierraChart\\Data\\NQH26-CME.dly",
+        "sha256": "9b43c1e3f489b402eb2d01905b6c1a4e5481d7d63d1ddaf769a8b816c485f995"
+      }
+    ]
+  },
+  {
+    "outgoing": "H26",
+    "incoming": "M26",
+    "decision_date": "2026-03-16",
+    "effective_trade_date": "2026-03-17",
+    "outgoing_volume": 413547,
+    "incoming_volume": 440409,
+    "sources": [
+      {
+        "path": "C:\\SierraChart\\Data\\NQH26-CME.dly",
+        "sha256": "9b43c1e3f489b402eb2d01905b6c1a4e5481d7d63d1ddaf769a8b816c485f995"
+      },
+      {
+        "path": "C:\\SierraChart\\Data\\NQM26-CME.dly",
+        "sha256": "5f104ba381a4f87ec185a2244e631aae356cab8252f3c6bad13c93ef52b764e9"
+      }
+    ]
+  },
+  {
+    "outgoing": "M26",
+    "incoming": "U26",
+    "decision_date": "2026-06-15",
+    "effective_trade_date": "2026-06-16",
+    "outgoing_volume": 344999,
+    "incoming_volume": 524507,
+    "sources": [
+      {
+        "path": "C:\\SierraChart\\Data\\NQM26-CME.dly",
+        "sha256": "5f104ba381a4f87ec185a2244e631aae356cab8252f3c6bad13c93ef52b764e9"
+      },
+      {
+        "path": "C:\\SierraChart\\Data\\NQU26-CME.dly",
+        "sha256": "270a92fd3c59ccc39bab02e5e859c87341a79731173cfcbfa85b24e77328a91b"
+      }
+    ]
+  },
+  {
+    "outgoing": "U26",
+    "incoming": "Z26",
+    "decision_date": "2026-09-14",
+    "effective_trade_date": "2026-09-15",
+    "outgoing_volume": 511803,
+    "incoming_volume": 528759,
+    "sources": [
+      {
+        "path": "C:\\SierraChart\\Data\\NQU26-CME.dly",
+        "sha256": "270a92fd3c59ccc39bab02e5e859c87341a79731173cfcbfa85b24e77328a91b"
+      },
+      {
+        "path": "C:\\SierraChart\\Data\\NQZ26-CME.dly",
+        "sha256": "74523d20acc4627926240db3a0d03d70ea9a5fd9b877f4a14e3c7dd85b7f80e0"
+      }
+    ]
+  }
+]
