@@ -53,8 +53,8 @@ def summarize(root):
     lines=['# Ricerca TO estesa: tempo e numero di trade', '',
            f"Stato: {campaign['status']}. Griglie complete per ogni blocco terminato. La scelta dei parametri avviene sul train; i risultati dei diversi blocchi restano tutti visibili.",
            'Barre tempo: 15/30/60/120/300 secondi. Barre trade: NQ 500/2000, ES 2000/10000 esecuzioni SCID. Segnale sulla barra completata; esecuzioni, stop e uscite sui tick reali. Barre trade incomplete scartate, reset a 18:00 NY e dopo gap >90 secondi.',
-           'Nessuna valutazione intrabar del TO ancora in formazione. Nessuna simulazione delle code del book. La parità native Sierra rimane da verificare sulle nuove aggregazioni.',
-           'Per ogni aggregazione: tre volumi minimi, due imbalance ratio, estremo richiesto sì/no, sei profili di pesi, tre SL, tre TP, due score, quattro finestre di ingresso. Volume imbalance e lookback sono fissati per aggregazione; trailing e BE disattivati in questa fase. Periodo gennaio 2025–settembre 2026 disponibile, rollout volume e raw -CME.',
+           'Nessuna valutazione intrabar del TO ancora in formazione. I fill usano ultimo prezzo scambiato e slippage, non il bid/ask nativo. Nessuna simulazione delle code del book. La parità nativa Sierra rimane da verificare sulle nuove aggregazioni.',
+           'Per ogni aggregazione: tre volumi minimi, due imbalance ratio, estremo richiesto sì/no, sei profili di pesi, tre SL, tre TP, due score, quattro finestre di ingresso. Volume imbalance e lookback sono fissati per aggregazione; trailing e BE disattivati in questa fase. Periodo gennaio 2025–settembre 2026 disponibile, rollover volume e raw -CME.',
            '72.576 combinazioni di parametri dichiarate. I profili con peso zero possono produrre segnali equivalenti per valori di componenti inutilizzati: non sono 72.576 strategie economicamente indipendenti.', '',
            '| Modello | Trade WF | Netto WF USD | Fold insufficienti | Trade finale | Netto finale USD | Stress USD | Sessione finale |',
            '|---|---:|---:|---:|---:|---:|---:|---|']
@@ -64,6 +64,20 @@ def summarize(root):
               f"Completate {result['unique_parameter_combinations']} combinazioni e {result['training_evaluations']} valutazioni train. Audit indipendente: {trade_count} trade, {tick_count} tick; ingressi nelle finestre selezionate e uscite entro 16:55 NY.",
               'Le date sono già state consultate: tutti i risultati sono esplorativi. Scegliere il miglior timeframe dal finale consuma ulteriormente il campione e richiede nuova validazione. Un singolo blocco positivo non dimostra edge robusto.',
               'Copertura da verifiche SCID, senza interpolazione o normalizzazione. Il periodo ESM26 non ordinato e sei giornate NQ mancanti restano esclusi ove segnalati nel relativo job.']
+    diagnostics=folder/'CANDIDATE_DIAGNOSTICS.json'
+    if diagnostics.exists():
+        all_diagnostics=json.loads(diagnostics.read_text())['rows']
+        for item in all_diagnostics:
+            if not (item['every_wf_fold_positive'] and item['every_wf_fold_sufficient'] and item['net']>0):continue
+            corresponding=next(r for r in rows if r['job_id']==item['job_id'])
+            lines += ['', '## Candidata esplorativa: '+item['label'], '',
+                      f"Finale: {item['n']} trade, {item['net']:.2f} USD; PF {corresponding['final_pf']:.4f}. Dopo aver rimosso le cinque giornate migliori: {item['net_without_best_five_days']:.2f} USD.",
+                      f"WF complessivo: {item['wf_net']:.2f} USD; con due tick aggiuntivi per trade: {item['wf_stress_extra_two_ticks']:.2f} USD. Ogni fold seleziona parametri propri sul suo train: questo non è il risultato della stessa configurazione fissa in tutti i fold.",
+                      'Parametri finali scelti sul development: '+json.dumps(corresponding['params'],ensure_ascii=False)]
+            proof=root/'dashboard_jobs'/item['job_id']/'SIGNAL_REPORT_VERIFICATION.json'
+            if proof.exists():
+                v=json.loads(proof.read_text())
+                lines += [f"Verificati {v['verified_published_signals']} segnali pubblicati contro la formula offline originale. Componente maggiore in valore assoluto: {json.dumps(v['largest_absolute_weighted_component'])}. Contributo netto assorbimento zero in {v['zero_net_absorption_component']} segnali; può includere assorbimenti opposti che si compensano. Non è una verifica dei fill nativi di Sierra."]
     (folder/'RISULTATI_MULTIBAR.md').write_text('\n'.join(lines),encoding='utf-8')
     if campaign['status']=='complete':(root/'docs/RICERCA_MULTIBAR_20261013.md').write_text('\n'.join(lines),encoding='utf-8')
     print(json.dumps(dict(status=result['status'],completed=len(rows),combinations=result['unique_parameter_combinations'],

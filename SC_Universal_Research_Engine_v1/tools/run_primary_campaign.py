@@ -43,6 +43,7 @@ def main():
     parser.add_argument('--out',type=Path,required=True);parser.add_argument('--prepare-only',action='store_true')
     parser.add_argument('--resume',action='store_true',help='Keep completed jobs and retry cancelled/failed ones')
     parser.add_argument('--plan',type=Path,help='Predeclared instrument-specific JSON plan')
+    parser.add_argument('--stop-after-block',action='store_true',help='Finish one block, then return without cancelling its worker')
     args=parser.parse_args();args.out.mkdir(parents=True,exist_ok=True)
     custom=json.loads(args.plan.read_text()) if args.plan else {}
     plan=custom['jobs'] if args.plan else configurations()
@@ -102,6 +103,8 @@ def main():
             row['sample_quality']=summary.get('sample_quality')
             print(json.dumps({k:row[k] for k in ['label','status','trials_run','elapsed_seconds','walk_forward_net']}),flush=True)
             persist()
+            if args.stop_after_block:
+                state['status']='between_blocks';persist();return
     state['status']='complete';state['finished']=datetime.now().isoformat();persist()
 
 

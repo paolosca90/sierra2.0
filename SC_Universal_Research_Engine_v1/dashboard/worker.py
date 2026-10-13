@@ -26,6 +26,7 @@ from sample_quality import statistics,training_objective,evaluation_status
 from research_checkpoint import TrialCheckpoint
 from entry_sessions import entry_mask
 from instruments import instrument_spec,instrument_metadata
+from grid_equivalence import strategy_key,training_result
 
 EXEC_DEFAULTS=dict(sl=40,tp=60,min_score=.3,trailing=0,trail_trigger=20,be_trigger=0,be_offset=0,quantity=1,session_mode=0)
 
@@ -192,7 +193,7 @@ def main(job):
     checkpoint=None
     if c['method']=='grid':
         model_files=['dashboard/worker.py','dashboard/indicators.py','tools/footprint_kernel.py','tools/managed_execution.py',
-                     'tools/scid_dataset.py','tools/causal_levels.py','tools/to_score_cache.py','tools/sample_quality.py','tools/research_grid.py','tools/entry_sessions.py','tools/bar_aggregation.py','tools/bar_schema.py','tools/instruments.py']
+                     'tools/scid_dataset.py','tools/causal_levels.py','tools/to_score_cache.py','tools/sample_quality.py','tools/research_grid.py','tools/entry_sessions.py','tools/bar_aggregation.py','tools/bar_schema.py','tools/instruments.py','tools/grid_equivalence.py']
         model_hashes={name:hashlib.sha256((Path(__file__).resolve().parents[1]/name).read_bytes()).hexdigest() for name in model_files}
         experiment={k:v for k,v in c.items() if k not in ['created_at','resumed_at','memory_reserve_gib','data_exclusions']}
         checkpoint=TrialCheckpoint(job,dict(model=model_hashes,experiment=experiment,
@@ -205,7 +206,7 @@ def main(job):
             # footprint once for all SL/TP/threshold combinations. GridSampler
             # shuffles this order and repeatedly evicts identical signals.
             if budget!=total_combinations:raise ValueError('Griglia incompleta: budget inferiore al prodotto cartesiano')
-            best=None;best_score=-1e30
+            best=None;best_score=-1e30;exact_memo={}
             for number,params in enumerate(grid_candidates(space,c.get('weight_profiles'))):
                 saved=checkpoint.rows.get((stage+1,number))
                 if saved:
@@ -214,15 +215,18 @@ def main(job):
                     if saved['objective']>best_score:best=params;best_score=saved['objective']
                     continue
                 ensure_memory(reclaim=True)
-                invalid=''
+                invalid='';reused=False
                 try:
-                    r=evaluate(engines,params,train)
+                    key=strategy_key(params,c['indicator'])
+                    if key in exact_memo:r=exact_memo[key];reused=True
+                    else:
+                        r=training_result(evaluate(engines,params,train));exact_memo[key]=r
                     score=training_objective(r,c)
                 except ValueError as error:
                     invalid=str(error);r=dict(n=0,net=0);score=-1e30
                 trials.append(dict(stage=stage+1,trial=number,objective=score,params=json.dumps(params),
                                    trades=r['n'],net=r['net'],active_days=r.get('sample',{}).get('active_days',0),
-                                   block_trades=json.dumps(r.get('sample',{}).get('block_trades',[])),invalid=invalid))
+                                   block_trades=json.dumps(r.get('sample',{}).get('block_trades',[])),invalid=invalid,reused_result=reused))
                 checkpoint.append(trials[-1])
                 if score>best_score:best=params;best_score=score
                 if number%25==0 or number+1==budget:
@@ -294,6 +298,9 @@ def main(job):
     if any(f.get('sample_status')!='sufficient_for_screening' for f in folds):
         summary['warnings'].append('Una o piu finestre walk-forward hanno un campione insufficiente.')
     summary['data_exclusions']=c.get('data_exclusions',[])
+    summary['search_reuse']=dict(exact_strategy_alias_rows=sum(bool(t.get('reused_result',False)) for t in trials),
+                                rule='Drop min_agg when absorption weight is zero; also drop imbalance when imbalance weight is zero.',
+                                approximate_pruning=False)
     summary['execution_quality']=[dict(source=m['signature']['path'],**e.execution_quality) for e,m in zip(engines,metadata)]
     summary['warnings'].append('Filtro gap conservativo fino alla scadenza: puo escludere trade gia chiusi prima del gap. Diagnostica in execution_quality; effetto sul P&L non misurato.')
     for m in metadata:
