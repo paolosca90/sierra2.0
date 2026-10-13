@@ -1,0 +1,30 @@
+name: Python research checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  research-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ['3.11', '3.12']
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: SC_Universal_Research_Engine_v1/requirements.txt
+      - run: python -m pip install -r SC_Universal_Research_Engine_v1/requirements.txt
+      - name: Syntax checks
+        run: python -m compileall -q SC_Universal_Research_Engine_v1/tools SC_Universal_Research_Engine_v1/dashboard SC_Universal_Research_Engine_v1/tests
+      - name: Deterministic, randomized and API regression tests
+        run: python -m unittest discover -s SC_Universal_Research_Engine_v1/tests -q

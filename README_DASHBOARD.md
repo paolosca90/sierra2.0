@@ -29,6 +29,8 @@ Il segnale è osservabile alla prima stampa della barra successiva. L'ingresso a
 
 Le finestre con gap oltre i limiti impostati sono escluse prima del backtest: criterio conservativo sull'intero percorso fino alla scadenza, anche se un trade avrebbe potuto terminare prima. Le prime 500 barre sono warmup. Sono supportate barre temporali, non Range/Renko/Volume bars.
 
+Le durate temporali devono dividere esattamente 86.400 secondi; la dashboard accetta valori interi da 1 a 3.600. Sono disponibili anche barre per numero di esecuzioni SCID. I nuovi report includono `execution_quality`: conteggi delle barre escluse per causa, prima dei filtri su segnali e sessioni. `excluded_first_reason` assegna una sola causa per barra nell'ordine dei controlli; `failures_nonexclusive` può contare una barra in più cause. Questi conteggi non misurano ancora l'effetto sul P&L di una diversa politica gap.
+
 Ogni trade nei report walk-forward e holdout della dashboard viene verificato da un **secondo simulatore scalare**, che visita ogni tick senza salti. Una discordanza su indice di uscita, motivo o P&L blocca il report. In **Operazioni → Tick per tick** puoi scaricare anche tutte le stampe, stop prima/dopo, aggiornamenti trailing/BE, fill e risultato di una specifica operazione.
 
 Questo verifica la coerenza interna. Non equivale alla riconciliazione completa con Sierra Trade Activity Log: il simulatore usa LAST e slippage, non ricostruisce spread bid/ask, coda degli ordini o fill live.
@@ -50,6 +52,10 @@ Pronti: TO Reversal, RSI Wilder con rientro dalle bande, incrocio EMA, MACD/sign
 Il motore è estensibile a indicatori/oscillatori tramite il protocollo Python in `dashboard/static/example_indicator.py`. Il plugin dichiara `METADATA` con nome e parametri e implementa `compute(data, params)`. Restituisce un array per barra: zero = nessun segnale, positivo = long, negativo = short, valori finiti tra -1 e 1. I prezzi forniti sono in punti; tempi UTC in microsecondi dall'epoca Sierra. Il plugin deve essere causale. Un controllo a prefissi individua alcuni casi di lookahead, senza costituire una prova completa.
 
 Importa solo codice Python locale di cui ti fidi: viene eseguito sul PC nel processo della ricerca, non in una sandbox. Un `.cpp` ACSIL viene analizzato per rilevare gli input ma resta **adattatore richiesto**. Un ACSIL arbitrario non diventa eseguibile fuori da Sierra con il semplice caricamento del file. Per ogni nuovo port occorre verificare la parità contro un export Sierra.
+
+L'importazione Python richiede ora conferma esplicita nell'interfaccia (`trusted_python: true` nell'API). Il sorgente approvato è identificato da SHA-256 e verificato anche quando il modulo è già in cache; file modificati e plugin legacy privi di autorizzazione devono essere reimportati. Il controllo di integrità non è una sandbox né una garanzia sulla sicurezza delle dipendenze importate.
+
+I nuovi risultati riportano `evidence_status`: natura esplorativa, indipendenza del test finale non verificata (o riuso già dichiarato), parità esecutiva nativa non verificata, drawdown dei soli trade chiusi e motore prop non implementato. Il registro economico della dashboard supporta esclusivamente NQ/ES full-size; MNQ/MES vengono respinti. Resoconto dei rilievi e test: [verifica audit 13 ottobre 2026](SC_Universal_Research_Engine_v1/docs/VERIFICA_AUDIT_20261013.md).
 
 ## Validazione e lettura dei risultati
 

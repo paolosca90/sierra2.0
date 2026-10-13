@@ -20,6 +20,8 @@ from worker import EXEC_DEFAULTS
 from trade_audit import audit_trade
 from resource_guard import ensure_memory,available_memory
 from research_grid import WEIGHTS,grid_size
+from bar_schema import validate_bar_seconds
+from instruments import instrument_spec
 
 ROOT=Path(__file__).resolve().parent;PROJECT=ROOT.parent;JOBS=PROJECT/'dashboard_jobs'
 app=FastAPI(title='Sierra Research Lab',docs_url=None,redoc_url=None)
@@ -61,12 +63,13 @@ async def get_plan(request:Request):
 async def upload(request:Request):
     if int(request.headers.get('content-length','0'))>1_100_000:raise HTTPException(413,'Sorgente troppo grande')
     c=await request.json()
-    try:return import_source(c['filename'],c['source'])
+    try:return import_source(c['filename'],c['source'],trusted=c.get('trusted_python',False))
     except (ValueError,SyntaxError,KeyError) as e:raise HTTPException(400,str(e))
 
 
 def validate_config(c):
     from entry_sessions import validate_windows
+    instrument_spec(c.get('instrument'))
     validate_windows(c.get('entry_windows',[]))
     c.setdefault('trades_per_bar',0)
     if isinstance(c['trades_per_bar'],bool) or not isinstance(c['trades_per_bar'],int) or c['trades_per_bar'] not in [0] and not 2<=c['trades_per_bar']<=100000:
@@ -88,7 +91,8 @@ def validate_config(c):
     for key,lo,hi in [('trials',1,10000),('bar_seconds',1,3600),('min_trades',1,100000),('horizon',1,1440),('seed',0,2**31-1),
                       ('entry_slip',0,100),('stop_slip',0,100),('exit_slip',0,100),('target_through',0,20),('delay_ms',0,60000)]:
         value=c.get(key)
-        if not isinstance(value,int) or not lo<=value<=hi:raise ValueError(f'{key}: valore intero {lo}..{hi}')
+        if isinstance(value,bool) or not isinstance(value,int) or not lo<=value<=hi:raise ValueError(f'{key}: valore intero {lo}..{hi}')
+    if not c['trades_per_bar']:validate_bar_seconds(c['bar_seconds'])
     for key,lo,hi in [('commission',0,1000),('max_gap',1,3600),('max_entry_gap',.001,3600),('level_filter',0,1000)]:
         value=c.get(key)
         if not isinstance(value,(int,float)) or not math.isfinite(value) or not lo<=value<=hi:raise ValueError(f'{key}: valore non valido')
@@ -128,6 +132,8 @@ def validate_config(c):
             if not isinstance(profile,dict) or set(profile)!=set(WEIGHTS) or any(not isinstance(v,(int,float)) or not math.isfinite(v) or v<0 for v in profile.values()) or sum(profile.values())<=0:
                 raise ValueError('Profilo pesi non valido')
         combos=combos//math.prod(len(c['parameters'][k]) for k in WEIGHTS)*len(profiles)
+    if c.get('calibrate_sensitivity') and c['indicator']=='to_reversal':
+        combos//=len(c['parameters']['sensitivity'])
     if c['method']=='grid' and combos>10000:raise ValueError('Griglia >10.000 combinazioni: seleziona ricerca TPE o riduci i valori')
     if c['method']=='grid' and c['trials']<combos:raise ValueError(f'Per griglia completa imposta almeno {combos} prove')
     planned=plan(c['data_folder'],c['instrument'],c['start'],c['end'])

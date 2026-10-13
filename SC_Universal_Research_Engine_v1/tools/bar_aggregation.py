@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 from footprint_kernel import aggregate_vap
 from resource_guard import ensure_memory
+from bar_schema import validate_bar_seconds
 
 
 def trade_starts(times,count):
@@ -36,9 +37,9 @@ def trade_starts(times,count):
 
 def rebar(data,meta,cache,seconds=60,trades=0):
     from scid_dataset import load_cache,EPOCH_PY
+    if not trades:validate_bar_seconds(seconds)
     if not trades and seconds==60:return data,meta
     if trades and (isinstance(trades,bool) or not isinstance(trades,int) or trades<2):raise ValueError('Numero trade per barra non valido')
-    if not trades and (seconds<1 or 86400%seconds):raise ValueError('Durata barra deve dividere 86400 secondi')
     signature=dict(meta['signature'],seconds=seconds,aggregation_schema=1,trades_per_bar=trades)
     key=hashlib.sha256(json.dumps(signature,sort_keys=True).encode()).hexdigest();folder=Path(cache)/key
     if (folder/'metadata.json').exists():return load_cache(folder)

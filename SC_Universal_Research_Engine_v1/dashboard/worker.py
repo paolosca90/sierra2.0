@@ -25,6 +25,7 @@ from to_score_cache import TOScoreCache
 from sample_quality import statistics,training_objective,evaluation_status
 from research_checkpoint import TrialCheckpoint
 from entry_sessions import entry_mask
+from instruments import instrument_spec,instrument_metadata
 
 EXEC_DEFAULTS=dict(sl=40,tp=60,min_score=.3,trailing=0,trail_trigger=20,be_trigger=0,be_offset=0,quantity=1,session_mode=0)
 
@@ -42,9 +43,10 @@ def publish_progress(job,payload):
 
 class Engine:
     def __init__(self,data,config,spec):
-        self.d=data;self.c=config
+        self.d=data;self.c=config;self.instrument=instrument_spec(config['instrument'])
         flatten=config.get('flatten_seconds',60900)
-        self.entry,self.end,self.good=execution_arrays(data,config['horizon'],config['delay_ms'],config['max_gap'],config['max_entry_gap'],flatten)
+        self.execution_quality={}
+        self.entry,self.end,self.good=execution_arrays(data,config['horizon'],config['delay_ms'],config['max_gap'],config['max_entry_gap'],flatten,self.execution_quality)
         observed=observation_times(data)
         cutoff=data['day_end']-(18*3600-flatten)*1_000_000
         self.eod=observed+config['delay_ms']*1000+config['horizon']*60_000_000>=cutoff-1_000_000
@@ -93,7 +95,7 @@ class Engine:
         if not good.any():return np.array([],dtype=float),np.array([],dtype=d['day'].dtype),[]
         values,exits,sides,reasons=managed_simulate(d['price'],d['times'],d['block_low'],d['block_high'],self.entry,self.end,
             good,self.signals(p),ep['min_score'],ep['sl'],ep['tp'],c['entry_slip'],c['stop_slip'],c['exit_slip'],
-            c['target_through'],5. if c['instrument']=='NQ' else 12.5,c['commission'],ep['trailing'],ep['trail_trigger'],
+            c['target_through'],self.instrument.tick_value,c['commission'],ep['trailing'],ep['trail_trigger'],
             ep['be_trigger'],ep['be_offset'],ep['quantity'],self.levels,c.get('level_filter',0))
         indices=np.flatnonzero(exits>=0);trades=[]
         reasons[(reasons==3)&self.eod]=4
@@ -108,9 +110,9 @@ class Engine:
                     entry_utc=str(EPOCH+np.timedelta64(int(d['times'][self.entry[i]]),'us')),
                     exit_utc=str(EPOCH+np.timedelta64(int(d['times'][exits[i]]),'us')),
                     exit_reason=reason,tick_audit_verified=True,ticks_audited=audited['ticks_visited'],
-                    entry_last=float(d['price'][self.entry[i]])*.25,
-                    entry_fill=(float(d['price'][self.entry[i]])+int(sides[i])*c['entry_slip'])*.25,
-                    exit_fill=(float(d['price'][self.entry[i]])+int(sides[i])*(c['entry_slip']+(values[i]/ep['quantity']+c['commission'])/(5. if c['instrument']=='NQ' else 12.5)))*.25,
+                    entry_last=float(d['price'][self.entry[i]])*self.instrument.tick_size,
+                    entry_fill=(float(d['price'][self.entry[i]])+int(sides[i])*c['entry_slip'])*self.instrument.tick_size,
+                    exit_fill=(float(d['price'][self.entry[i]])+int(sides[i])*(c['entry_slip']+(values[i]/ep['quantity']+c['commission'])/self.instrument.tick_value))*self.instrument.tick_size,
                     quantity=ep['quantity'],signal=float(self.signals(p)[i])))
         return values[indices],d['day'][indices],trades
 
@@ -136,6 +138,7 @@ def c_blocks(engines):
 
 def main(job):
     job=Path(job);c=json.loads((job/'config.json').read_text());started=time.perf_counter()
+    instrument=instrument_spec(c['instrument'])
     initialize_research(c.get('memory_reserve_gib',4))
     def progress(stage,percent,**kw):
         publish_progress(job,dict(stage=stage,percent=percent,elapsed_seconds=time.perf_counter()-started,**kw))
@@ -162,8 +165,6 @@ def main(job):
     days=sorted({d for e in engines for d in e.days})
     if len(days)<6:raise ValueError('Servono almeno 6 trade date per train/validazione/test; preferire mesi di storia')
     hold_n=max(2,math.ceil(len(days)*.2));dev,hold=days[:-hold_n],days[-hold_n:]
-    total_combinations=grid_size(space,c.get('weight_profiles'))
-    budget=min(c['trials'],total_combinations)
     optuna.logging.set_verbosity(optuna.logging.ERROR)
     trials=[];folds=[];wftrades=[]
     initial=max(1,len(dev)//2)
@@ -184,11 +185,14 @@ def main(job):
         c['parameters']['sensitivity']=[chosen];space['i:sensitivity']=[chosen]
         save_json(job/'SCORE_CALIBRATION.json',dict(initial_training_days=dev[:initial],candidates=calibration,chosen=chosen,
                     rule='Minimize abs(nonzero-score q99 - 0.7) + 5*saturation; score distribution only, no P&L'))
+    # Calibration freezes an axis: count the actual candidates, also on resume.
+    total_combinations=grid_size(space,c.get('weight_profiles'))
+    budget=min(c['trials'],total_combinations)
     save_json(job/'config.json',c)
     checkpoint=None
     if c['method']=='grid':
         model_files=['dashboard/worker.py','dashboard/indicators.py','tools/footprint_kernel.py','tools/managed_execution.py',
-                     'tools/scid_dataset.py','tools/causal_levels.py','tools/to_score_cache.py','tools/sample_quality.py','tools/research_grid.py','tools/entry_sessions.py','tools/bar_aggregation.py']
+                     'tools/scid_dataset.py','tools/causal_levels.py','tools/to_score_cache.py','tools/sample_quality.py','tools/research_grid.py','tools/entry_sessions.py','tools/bar_aggregation.py','tools/bar_schema.py','tools/instruments.py']
         model_hashes={name:hashlib.sha256((Path(__file__).resolve().parents[1]/name).read_bytes()).hexdigest() for name in model_files}
         experiment={k:v for k,v in c.items() if k not in ['created_at','resumed_at','memory_reserve_gib','data_exclusions']}
         checkpoint=TrialCheckpoint(job,dict(model=model_hashes,experiment=experiment,
@@ -262,7 +266,7 @@ def main(job):
     save_csv(job/'TRIALS.csv',trials);save_csv(job/'WALK_FORWARD.csv',folds);save_csv(job/'WF_TRADES.csv',wftrades)
     if best is None:raise ValueError('Nessuna configurazione valida raggiunge il numero minimo di trade; consulta TRIALS.csv')
     save_json(job/'SELECTION_LOCK.json',dict(params=best,development=dev,holdout=hold))
-    progress('Test finale fuori campione',94)
+    progress('Test finale esplorativo',94)
     result=evaluate(engines,best,hold,True);save_csv(job/'HOLDOUT_TRADES.csv',result['trades'])
     uncertainty=daily_bootstrap(result,hold,c['seed'])
     eq=0.;curve=[dict(date=hold[0],equity=0.)]
@@ -270,9 +274,14 @@ def main(job):
     summary=dict(indicator=schema['name'],instrument=c['instrument'],params=best,holdout={k:v for k,v in result.items() if k!='trades'},
         walk_forward=folds,development_days=dev,holdout_days=hold,uncertainty=uncertainty,equity=curve,
         elapsed_seconds=time.perf_counter()-started,total_combinations=total_combinations,trials_run=len(trials),datasets=metadata,
-        stress_extra_2_ticks_net=result['net']-result['n']*2*(5. if c['instrument']=='NQ' else 12.5)*best['e:quantity'],
+        instrument_spec=instrument_metadata(c['instrument']),
+        evidence_status=dict(classification='exploratory',holdout_independence='known_reused' if c.get('exploratory_retest') else 'not_verified',
+                             native_execution_parity='not_verified',prop_rules='not_implemented',
+                             drawdown_basis='closed_trade_equity',gap_policy='full_horizon'),
+        stress_extra_2_ticks_net=result['net']-result['n']*2*instrument.tick_value*best['e:quantity'],
         warnings=['Esecuzioni da ultimo prezzo scambiato, senza simulazione della coda ordini.',
                   'Drawdown su trade chiusi; non equivale al drawdown intratrade delle prop firm.',
+                  'Indipendenza del segmento finale non verificata: lo split temporale non certifica un campione mai consultato.',
                   'Le date holdout sono ora consumate: non riottimizzarle per scegliere una nuova strategia.'])
     if len(days)<60 or len(hold)<20:summary['warnings'].append('Campione breve: risultati esplorativi, nessuna conclusione robusta sull’edge.')
     for m in metadata:
@@ -285,6 +294,8 @@ def main(job):
     if any(f.get('sample_status')!='sufficient_for_screening' for f in folds):
         summary['warnings'].append('Una o piu finestre walk-forward hanno un campione insufficiente.')
     summary['data_exclusions']=c.get('data_exclusions',[])
+    summary['execution_quality']=[dict(source=m['signature']['path'],**e.execution_quality) for e,m in zip(engines,metadata)]
+    summary['warnings'].append('Filtro gap conservativo fino alla scadenza: puo escludere trade gia chiusi prima del gap. Diagnostica in execution_quality; effetto sul P&L non misurato.')
     for m in metadata:
         if m.get('excluded_trade_dates'):
             summary['warnings'].append('Giornate SCID assenti ed escluse: '+', '.join(m['excluded_trade_dates']))

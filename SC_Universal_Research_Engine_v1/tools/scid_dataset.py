@@ -11,6 +11,7 @@ import numpy as np
 from footprint_kernel import aggregate_vap, block_extrema, scores, vector
 from robust_optimizer import RECORD, EPOCH, CSV_DT, micros, save_json
 from resource_guard import ensure_memory
+from bar_schema import validate_bar_seconds
 
 SCHEMA = 2
 EPOCH_PY = datetime(1899,12,30,tzinfo=timezone.utc)
@@ -36,8 +37,7 @@ def prepare(path, cache_root, seconds=60, chart_timezone='America/New_York', sta
     path=Path(path).resolve();cache_root=Path(cache_root)
     if path.stem.endswith('.CME'):
         raise ValueError('Alias .CME escluso: scala prezzi non verificata; usare solo -CME senza normalizzazione')
-    if seconds < 1 or 86400 % seconds:
-        raise ValueError('Time bar size must divide a UTC day')
+    validate_bar_seconds(seconds)
     stat=path.stat()
     signature=dict(schema=SCHEMA,path=str(path),bytes=stat.st_size,mtime_ns=stat.st_mtime_ns,
                    seconds=seconds,timezone=chart_timezone,start=start,end=end)
@@ -217,7 +217,7 @@ def observation_times(data):
     return observed
 
 
-def execution_arrays(data,horizon=30,delay_ms=1,max_gap=90.,max_entry_gap=5.,flatten_seconds=None):
+def execution_arrays(data,horizon=30,delay_ms=1,max_gap=90.,max_entry_gap=5.,flatten_seconds=None,diagnostics=None):
     times=data['times'];n=len(data['bar_time'])
     # A time bar closes on first print of the next bar, not retrospectively
     # at its last print. Last bar is never eligible.
@@ -232,19 +232,31 @@ def execution_arrays(data,horizon=30,delay_ms=1,max_gap=90.,max_entry_gap=5.,fla
         deadline=np.minimum(deadline,cutoff-1_000_000)
     end=np.searchsorted(times,deadline)
     good=(entry<len(times))&(end<len(times))&(end>entry)
+    if diagnostics is not None:
+        diagnostics.update(policy='full_horizon',unit='bars_before_signal_and_session_filters',total_bars=n,
+                           excluded_first_reason={'missing_execution_window':int(np.count_nonzero(~good))},
+                           failures_nonexclusive={'missing_execution_window':int(np.count_nonzero(~good))})
+    def require(reason,condition):
+        if diagnostics is not None:
+            diagnostics['excluded_first_reason'][reason]=int(np.count_nonzero(good&~condition))
+            diagnostics['failures_nonexclusive'][reason]=int(np.count_nonzero(~condition))
+        good[:] &= condition
     entry=np.minimum(entry,len(times)-1);end=np.minimum(end,len(times)-1)
     # O(ticks) once; trials don't scan gaps repeatedly.
     gap_prefix=np.r_[0,np.cumsum(np.diff(times)>max_gap*1e6)]
-    good &= (times[entry]-due<=max_entry_gap*1e6)&(times[end]-deadline<=max_entry_gap*1e6)
-    good &= (gap_prefix[end]-gap_prefix[entry]==0)
-    good &= times[end]<data['day_end']
-    if flatten_seconds is not None:good &= (times[end]<=cutoff)&(times[entry]<cutoff-1_000_000)
+    require('late_entry',times[entry]-due<=max_entry_gap*1e6)
+    require('late_timeout',times[end]-deadline<=max_entry_gap*1e6)
+    require('gap_before_horizon',gap_prefix[end]-gap_prefix[entry]==0)
+    require('session_boundary',times[end]<data['day_end'])
+    if flatten_seconds is not None:require('daily_cutoff',(times[end]<=cutoff)&(times[entry]<cutoff-1_000_000))
     # Drop warmup, first partial and last still-forming bar, and bar/session gaps.
-    good[:min(500,n)]=False;good[-1]=False
+    complete=np.ones(n,bool);complete[:min(500,n)]=False;complete[-1]=False
+    require('warmup_or_last_bar',complete)
     if 'bar_complete' in data:
-        good &= data['bar_complete']
+        require('incomplete_bar',data['bar_complete'])
     elif n>1:
         bar_duration=int(np.min(np.diff(data['bar_time'])))
-        good &= observed-data['bar_time']<=bar_duration+max_entry_gap*1e6
+        require('bar_observation_gap',observed-data['bar_time']<=bar_duration+max_entry_gap*1e6)
     else:good[:]=False
+    if diagnostics is not None:diagnostics['eligible_bars']=int(np.count_nonzero(good))
     return entry,end,good

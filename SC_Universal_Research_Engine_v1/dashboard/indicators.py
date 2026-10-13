@@ -71,11 +71,13 @@ def registry():
     return result
 
 
-def import_source(filename,source):
+def import_source(filename,source,trusted=False):
     if len(source.encode())>1_000_000:raise ValueError('Max 1 MB per sorgente')
     suffix=Path(filename).suffix.lower()
     identity='plugin_'+hashlib.sha256(source.encode()).hexdigest()[:16]
     if suffix=='.py':
+        if trusted is not True:
+            raise ValueError('Plugin Python non autorizzato: codice senza sandbox con accesso ai file e alla rete del tuo utente. Importa solo sorgenti fidati e conferma trusted_python.')
         tree=ast.parse(source);metadata=None
         for node in tree.body:
             if isinstance(node,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='METADATA' for t in node.targets):
@@ -88,7 +90,8 @@ def import_source(filename,source):
             if not isinstance(v,dict) or not isinstance(v.get('default'),(float,int)) or not np.isfinite(v['default']):
                 raise ValueError('Ogni parametro richiede un default numerico finito')
         meta=dict(id=identity,name=str(metadata.get('name',filename)),kind='Plugin Python locale',status='ready',
-                  description='Codice locale importato; eseguito nel processo di ricerca. Parità Sierra non verificata.',params=metadata['params'])
+                  description='Codice fidato senza sandbox: accesso ai file e alla rete del tuo utente. Parità Sierra non verificata.',
+                  params=metadata['params'],trusted_python=True,source_sha256=hashlib.sha256(source.encode()).hexdigest())
     elif suffix in ('.cpp','.h'):
         # Import is real source inspection, never an invented conversion.
         import re
@@ -100,18 +103,26 @@ def import_source(filename,source):
                   description='Input rilevati. Questo sorgente dipende da Sierra: serve un adattatore verificato prima del backtest offline.',params=inputs)
     else:raise ValueError('Importa un plugin .py oppure un sorgente ACSIL .cpp/.h')
     PLUGINS.mkdir(parents=True,exist_ok=True)
-    (PLUGINS/(identity+suffix)).write_text(source,encoding='utf-8')
+    (PLUGINS/(identity+suffix)).write_bytes(source.encode('utf-8'))
     (PLUGINS/(identity+'.json')).write_text(json.dumps(meta,indent=2),encoding='utf-8')
     return meta
 
 
 _loaded={}
 def plugin_module(identity):
-    if identity not in _loaded:
-        path=PLUGINS/(identity+'.py')
+    if not identity.startswith('plugin_') or len(identity)!=23 or any(c not in '0123456789abcdef' for c in identity[7:]):
+        raise ValueError('Identita plugin non valida')
+    path=PLUGINS/(identity+'.py')
+    meta=json.loads((PLUGINS/(identity+'.json')).read_text(encoding='utf-8'))
+    source=path.read_bytes();digest=hashlib.sha256(source).hexdigest()
+    if meta.get('trusted_python') is not True or meta.get('source_sha256')!=digest or identity!='plugin_'+digest[:16]:
+        raise ValueError('Plugin non autorizzato o modificato: reimportare e confermare il sorgente fidato')
+    # Verify even cached modules; compile the checked bytes, never a stale .pyc.
+    key=(str(path.resolve()),digest)
+    if key not in _loaded:
         spec=importlib.util.spec_from_file_location(identity,path)
-        module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);_loaded[identity]=module
-    return _loaded[identity]
+        module=importlib.util.module_from_spec(spec);exec(compile(source,str(path),'exec'),module.__dict__);_loaded[key]=module
+    return _loaded[key]
 
 
 def signal(identity,data,params):

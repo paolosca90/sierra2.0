@@ -5,15 +5,17 @@ from pathlib import Path
 import numpy as np
 from scid_dataset import load_cache, execution_arrays,observation_times
 from robust_optimizer import EPOCH
+from instruments import instrument_spec
 
 
 def trace(price,times,start,end,side,ep,c,emit):
+    instrument=instrument_spec(c['instrument'])
     fill=float(price[start])+side*c['entry_slip']
     stop=-float(ep['sl']) if ep['sl'] else -float('inf')
     if ep['trailing']>0 and ep['trail_trigger']==0:stop=max(stop,-ep['trailing'])
     target=ep['tp']+c['target_through'] if ep['tp'] else float('inf')
     peak=0.;net=None;reason=None
-    def level(v):return (fill+side*v)*.25 if np.isfinite(v) else ''
+    def level(v):return (fill+side*v)*instrument.tick_size if np.isfinite(v) else ''
     for i in range(start,end+1):
         move=side*(float(price[i])-fill);before=stop;event='ENTRY' if i==start else 'TICK';exit_fill=''
         if i>start:
@@ -30,10 +32,10 @@ def trace(price,times,start,end,side,ep,c,emit):
                 if ep['trailing']>0 and peak>=ep['trail_trigger'] and peak-ep['trailing']>stop:
                     stop=peak-ep['trailing'];event='TRAILING' if event=='TICK' else event+'+TRAILING'
             if reason:
-                net=(ticks*(5. if c['instrument']=='NQ' else 12.5)-c['commission'])*ep['quantity']
-                exit_fill=(fill+side*ticks)*.25
-        if emit is not None:emit(dict(tick_index_in_snapshot=i,timestamp_utc=str(EPOCH+np.timedelta64(int(times[i]),'us')),last_price=float(price[i])*.25,
-                  event=event,side=side,entry_fill=fill*.25,stop_before=level(before),stop_after=level(stop),
+                net=(ticks*instrument.tick_value-c['commission'])*ep['quantity']
+                exit_fill=(fill+side*ticks)*instrument.tick_size
+        if emit is not None:emit(dict(tick_index_in_snapshot=i,timestamp_utc=str(EPOCH+np.timedelta64(int(times[i]),'us')),last_price=float(price[i])*instrument.tick_size,
+                  event=event,side=side,entry_fill=fill*instrument.tick_size,stop_before=level(before),stop_after=level(stop),
                   target_fill=level(float(ep['tp'])) if ep['tp'] else '',target_trigger=level(target),
                   favorable_peak_ticks=peak,exit_fill=exit_fill,net_usd=net if reason else ''))
         if reason:return dict(exit_index=i,net_usd=net,reason=reason,ticks_visited=i-start+1)
