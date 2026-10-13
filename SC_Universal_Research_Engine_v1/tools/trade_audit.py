@@ -3,7 +3,7 @@ import csv
 import json
 from pathlib import Path
 import numpy as np
-from scid_dataset import load_cache, execution_arrays
+from scid_dataset import load_cache, execution_arrays,observation_times
 from robust_optimizer import EPOCH
 
 
@@ -59,7 +59,7 @@ def audit_trade(folder,index):
         if not len(matches):continue
         bar=int(matches[0]);end=int(ends[bar]);filename=f'AUDIT_{index:06d}.csv';sample=[];tail=[];events=[]
         if flatten is not None:
-            observed=int(d['times'][d['starts'][bar+1]])
+            observed=int(observation_times(d)[bar])
             cutoff=int(d['day_end'][bar])-(18*3600-flatten)*1_000_000
             if observed+c['delay_ms']*1000+c['horizon']*60_000_000>=cutoff-1_000_000:c['timeout_reason']='END_OF_DAY'
         with (folder/filename).open('w',encoding='utf-8',newline='') as f:

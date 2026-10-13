@@ -60,7 +60,7 @@ class TOScoreCache:
 
     def score(self,params):
         p=DEFAULTS|params
-        key=tuple(sorted((k,v) for k,v in p.items() if k not in ('w_abs','w_trap','w_delta','w_imb','sensitivity')))
+        key=tuple(sorted((k,v) for k,v in p.items() if k not in ('w_abs','w_trap','w_delta','w_imb','sensitivity','require_extreme','volume_weight')))
         if self.key!=key:
             _,metrics=calculate(self.data,p)
             if self.totals is None:self.totals=bar_totals(self.data['offsets'],self.data['volume'])

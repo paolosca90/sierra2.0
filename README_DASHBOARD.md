@@ -84,3 +84,50 @@ Il server ascolta solo su loopback, con token sulle operazioni di scrittura. Que
 ## Protezione delle risorse
 
 Una ricerca web alla volta, priorità Windows inferiore al normale e riserva predefinita di 4 GiB di RAM disponibile prima di partire e tra i blocchi/trial. Per la campagna PRIMARY_GRID_20261013, con Sierra chiuso, la riserva esplicita e 3 GiB (configurazione memory_reserve_gib). Il worker può rilasciare le proprie pagine di cache residenti; se la riserva non torna disponibile la ricerca si arresta. Il controllo è periodico, non un tetto hardware istantaneo: non garantisce che altre applicazioni non si blocchino. Annulla ricerca termina anche i processi figli del launcher Python Windows.
+# Orari degli ingressi e ricerca stop (ottobre 2026)
+
+La gestione posizione permette di scegliere ingressi su giornata completa,
+09:30–16:00, 09:30–12:00 oppure 12:00–16:00 New York. Il filtro controlla
+l'orario del fill simulato effettivo, con ora legale, non l'apertura della barra.
+La fine della finestra impedisce nuovi ingressi; non forza l'uscita dei trade
+già aperti. Resta obbligatoria la chiusura entro le 16:55 New York.
+
+L'API accetta `entry_windows`, una lista di coppie `[inizio, fine]` in secondi
+locali New York, inizio incluso e fine esclusa. La lista vuota permette tutte
+le ore compatibili con i controlli di esecuzione. Una finestra che attraversa
+mezzanotte va divisa in due intervalli.
+
+La campagna esplorativa si prepara con `tools/build_session_stop_plan.py` e
+si esegue con `tools/run_primary_campaign.py --plan output/SESSION_STOP_GRID_20261013/GRID_PLAN.json --out output/SESSION_STOP_GRID_20261013`.
+Usa soglie di volume separate per NQ/ES e confronta stop fissi, break-even e
+trailing. Il finale è già stato consultato: i risultati non costituiscono una
+nuova validazione indipendente. Il volume aggressivo indica contratti scambiati
+al livello; non il numero degli ordini presenti nel book. Un break-even con
+offset zero non copre commissioni e slippage.
+
+## Barre temporali e per numero di trade
+
+La dashboard permette anche barre da 15 e 30 secondi e barre costruite con
+un numero configurabile di trade SCID. Ogni record idoneo contiene una singola
+esecuzione; il contatore non misura gli ordini presenti nel book.
+
+Le barre per trade si chiudono all'ultima esecuzione che completa il conteggio.
+Il segnale usa soltanto la barra completata; l'ingresso avviene su un tick
+successivo al ritardo configurato. Le barre incomplete non generano ingressi.
+Il conteggio riparte alle 18:00 New York e dopo gap di registrazione superiori
+a 90 secondi. Stop, target e uscite continuano a usare il nastro completo dei
+tick, indipendentemente dal tipo di barra.
+
+Le cache di aggregazioni diverse condividono i file immutabili dei tick tramite
+hard link quando il filesystem lo permette. Questo evita di duplicare il nastro
+per ciascun timeframe; non altera i file SCID originali.
+
+La casella «Confronta tutte le quattro finestre» include la sessione tra i
+parametri da cercare. La scelta avviene sul train, mantenendo tutte le finestre
+di valutazione cronologiche e la chiusura obbligatoria alle 16:55.
+
+La griglia estesa è definita in `tools/build_multibar_plan.py`: 14 blocchi,
+72.576 combinazioni dichiarate, 290.304 valutazioni nei quattro train.
+`tools/summarize_multibar_campaign.py` verifica copertura, finestre di ingresso
+e uscite degli esperimenti terminati. I periodi già consultati restano ricerca
+esplorativa; la nuova aggregazione richiede riconciliazione nativa con Sierra.

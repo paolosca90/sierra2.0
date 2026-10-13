@@ -13,7 +13,7 @@ from types import SimpleNamespace
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'tools'))
 import numpy as np
 import optuna
-from scid_dataset import prepare_spec,execution_arrays
+from scid_dataset import prepare_spec,execution_arrays,observation_times
 from causal_levels import from_dataset
 from managed_execution import managed_simulate
 from robust_optimizer import save_json,save_csv,EPOCH,daily_bootstrap
@@ -24,8 +24,9 @@ from research_grid import grid_candidates,grid_size
 from to_score_cache import TOScoreCache
 from sample_quality import statistics,training_objective,evaluation_status
 from research_checkpoint import TrialCheckpoint
+from entry_sessions import entry_mask
 
-EXEC_DEFAULTS=dict(sl=40,tp=60,min_score=.3,trailing=0,trail_trigger=20,be_trigger=0,be_offset=0,quantity=1)
+EXEC_DEFAULTS=dict(sl=40,tp=60,min_score=.3,trailing=0,trail_trigger=20,be_trigger=0,be_offset=0,quantity=1,session_mode=0)
 
 
 def publish_progress(job,payload):
@@ -44,10 +45,14 @@ class Engine:
         self.d=data;self.c=config
         flatten=config.get('flatten_seconds',60900)
         self.entry,self.end,self.good=execution_arrays(data,config['horizon'],config['delay_ms'],config['max_gap'],config['max_entry_gap'],flatten)
-        observed=np.r_[data['times'][data['starts'][1:]],data['times'][-1]]
+        observed=observation_times(data)
         cutoff=data['day_end']-(18*3600-flatten)*1_000_000
         self.eod=observed+config['delay_ms']*1000+config['horizon']*60_000_000>=cutoff-1_000_000
         self.good &= (data['day']>=spec['trade_from'])&(data['day']<=spec['trade_to'])
+        self.good &= entry_mask(data['times'][self.entry],config.get('entry_windows',[]))
+        self.session_masks={0:np.ones(len(self.good),bool)}
+        for mode,window in [(1,[[34200,57600]]),(2,[[34200,43200]]),(3,[[43200,57600]])]:
+            self.session_masks[mode]=entry_mask(data['times'][self.entry],window)
         self.days=sorted(set(data['day'][(data['day']>=spec['trade_from'])&(data['day']<=spec['trade_to'])]))
         need_levels=config.get('level_filter',0)>0 or any(x['indicator']=='deluxe_levels' for x in config.get('confirmations',[]))
         self.levels=from_dataset(data)[1] if need_levels else np.full(len(self.good),np.inf)
@@ -82,7 +87,9 @@ class Engine:
         day_key=tuple(days)
         if self.mask_key!=day_key:
             self.mask=self.good&np.isin(d['day'],days);self.mask_key=day_key
-        good=self.mask
+        mode=int(ep.get('session_mode',0))
+        if mode not in self.session_masks:raise ValueError('session_mode deve essere 0..3')
+        good=self.mask&self.session_masks[mode]
         if not good.any():return np.array([],dtype=float),np.array([],dtype=d['day'].dtype),[]
         values,exits,sides,reasons=managed_simulate(d['price'],d['times'],d['block_low'],d['block_high'],self.entry,self.end,
             good,self.signals(p),ep['min_score'],ep['sl'],ep['tp'],c['entry_slip'],c['stop_slip'],c['exit_slip'],
@@ -146,7 +153,7 @@ def main(job):
     for i,s in enumerate(c['manifest']):
         progress(f'Lettura SCID {Path(s["scid"]).stem}',2+28*i/len(c['manifest']))
         if c.get('available_data_only'):s=dict(s,allow_missing_trade_dates=True,alternatives=[],partial_alternatives=[])
-        try:d,m=prepare_spec(s,c['cache'],c['bar_seconds'])
+        try:d,m=prepare_spec(s,c['cache'],c['bar_seconds'],c.get('trades_per_bar',0))
         except ValueError as error:
             if not c.get('available_data_only'):raise
             c.setdefault('data_exclusions',[]).append(dict(source=s['scid'],start=s['trade_from'],end=s['trade_to'],reason=str(error)))
@@ -181,7 +188,7 @@ def main(job):
     checkpoint=None
     if c['method']=='grid':
         model_files=['dashboard/worker.py','dashboard/indicators.py','tools/footprint_kernel.py','tools/managed_execution.py',
-                     'tools/scid_dataset.py','tools/causal_levels.py','tools/to_score_cache.py','tools/sample_quality.py','tools/research_grid.py']
+                     'tools/scid_dataset.py','tools/causal_levels.py','tools/to_score_cache.py','tools/sample_quality.py','tools/research_grid.py','tools/entry_sessions.py','tools/bar_aggregation.py']
         model_hashes={name:hashlib.sha256((Path(__file__).resolve().parents[1]/name).read_bytes()).hexdigest() for name in model_files}
         experiment={k:v for k,v in c.items() if k not in ['created_at','resumed_at','memory_reserve_gib','data_exclusions']}
         checkpoint=TrialCheckpoint(job,dict(model=model_hashes,experiment=experiment,

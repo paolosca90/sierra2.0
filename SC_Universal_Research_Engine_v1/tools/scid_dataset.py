@@ -17,7 +17,11 @@ EPOCH_PY = datetime(1899,12,30,tzinfo=timezone.utc)
 
 
 def load_cache(folder):
+    folder=Path(folder).resolve()
     meta=json.loads((folder/'metadata.json').read_text())
+    # Older caches can contain a relative creation path. The directory being
+    # opened is authoritative, including when a dashboard worker has another cwd.
+    meta['cache_directory']=str(folder)
     return {name:np.load(folder/(name+'.npy'),mmap_mode='r',allow_pickle=False)
             for name in meta['arrays']},meta
 
@@ -134,7 +138,11 @@ def prepare(path, cache_root, seconds=60, chart_timezone='America/New_York', sta
     return load_cache(folder)
 
 
-def prepare_spec(spec,cache,seconds=60):
+def prepare_spec(spec,cache,seconds=60,trades_per_bar=0):
+    if seconds!=60 or trades_per_bar:
+        from bar_aggregation import rebar
+        data,meta=prepare_spec(spec,cache,60)
+        return rebar(data,meta,cache,seconds,trades_per_bar)
     rejected=[];valid=[];expected=set(spec.get('expected_trade_dates',[]))
     for path in [spec['scid']]+spec.get('alternatives',[]):
         try:
@@ -202,11 +210,18 @@ def parity(data,csv_path,params=None,chart_timezone='America/New_York'):
                 passed=bool(checked>=100 and different==0 and ohlc_bad==0 and not metric_bad.any() and mask_bad==0),examples=examples)
 
 
+def observation_times(data):
+    if 'bar_close_time' in data:return data['bar_close_time']
+    times=data['times'];n=len(data['bar_time'])
+    observed=np.zeros(n,np.int64);observed[:-1]=times[data['starts'][1:]];observed[-1]=times[-1]
+    return observed
+
+
 def execution_arrays(data,horizon=30,delay_ms=1,max_gap=90.,max_entry_gap=5.,flatten_seconds=None):
     times=data['times'];n=len(data['bar_time'])
     # A time bar closes on first print of the next bar, not retrospectively
     # at its last print. Last bar is never eligible.
-    observed=np.zeros(n,np.int64);observed[:-1]=times[data['starts'][1:]];observed[-1]=times[-1]
+    observed=observation_times(data)
     due=observed+delay_ms*1000
     entry=np.searchsorted(times,due,side='right')
     deadline=due+horizon*60_000_000
@@ -226,6 +241,10 @@ def execution_arrays(data,horizon=30,delay_ms=1,max_gap=90.,max_entry_gap=5.,fla
     if flatten_seconds is not None:good &= (times[end]<=cutoff)&(times[entry]<cutoff-1_000_000)
     # Drop warmup, first partial and last still-forming bar, and bar/session gaps.
     good[:min(500,n)]=False;good[-1]=False
-    bar_duration=int(np.min(np.diff(data['bar_time'])))
-    good &= observed-data['bar_time']<=bar_duration+max_entry_gap*1e6
+    if 'bar_complete' in data:
+        good &= data['bar_complete']
+    elif n>1:
+        bar_duration=int(np.min(np.diff(data['bar_time'])))
+        good &= observed-data['bar_time']<=bar_duration+max_entry_gap*1e6
+    else:good[:]=False
     return entry,end,good

@@ -66,6 +66,12 @@ async def upload(request:Request):
 
 
 def validate_config(c):
+    from entry_sessions import validate_windows
+    validate_windows(c.get('entry_windows',[]))
+    c.setdefault('trades_per_bar',0)
+    if isinstance(c['trades_per_bar'],bool) or not isinstance(c['trades_per_bar'],int) or c['trades_per_bar'] not in [0] and not 2<=c['trades_per_bar']<=100000:
+        raise ValueError('trades_per_bar: 0 per barre tempo oppure 2..100000 trade')
+    c.setdefault('execution',{}).setdefault('session_mode',[0])
     for key,default,low,high in [('min_active_days',0,0,100000),('min_trades_per_training_block',0,0,100000),
                               ('training_blocks',3,2,6),('validation_min_trades',30,1,100000),('validation_min_active_days',10,1,100000)]:
         c.setdefault(key,default)
@@ -100,6 +106,7 @@ def validate_config(c):
             if any(v<meta.get('min',0) or (meta.get('integer') and int(v)!=v) for v in values):raise ValueError(f'{k}: tipo/intervallo non valido')
             if group=='execution' and k=='min_score' and any(v<=0 or v>1 for v in values):raise ValueError('Score deve essere >0 e <=1')
             if group=='execution' and k=='quantity' and any(v>100 for v in values):raise ValueError('Massimo 100 contratti simulati')
+            if group=='execution' and k=='session_mode' and any(v>3 for v in values):raise ValueError('session_mode: 0 ALL, 1 RTH, 2 AM, 3 PM')
             combos*=len(values)
     if c.get('combine_mode','and') not in ('and','or'):raise ValueError('Combinazione non valida')
     if not isinstance(c.get('confirmation_bars',3),int) or not 0<=c.get('confirmation_bars',3)<=500:raise ValueError('Conferme: 0..500 barre')

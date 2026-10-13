@@ -1,0 +1,512 @@
+{
+  "jobs": [
+    {
+      "data_folder": "C:\\SierraChart\\Data",
+      "instrument": "NQ",
+      "start": "2025-04-01",
+      "end": "2026-09-30",
+      "indicator": "to_reversal",
+      "parameters": {
+        "min_agg": [
+          10,
+          20,
+          40
+        ],
+        "min_pct": [
+          3
+        ],
+        "level_multiple": [
+          1.5
+        ],
+        "diagonal": [
+          1.0
+        ],
+        "imbalance": [
+          2
+        ],
+        "extreme_ticks": [
+          6
+        ],
+        "rejection_ticks": [
+          3
+        ],
+        "close_through": [
+          0.0
+        ],
+        "bubbles": [
+          2.0
+        ],
+        "separation": [
+          3.0
+        ],
+        "trap_buffer": [
+          2.0
+        ],
+        "min_trapped": [
+          0.0
+        ],
+        "imbalance_volume": [
+          20.0
+        ],
+        "lookback": [
+          5,
+          15
+        ],
+        "require_extreme": [
+          0,
+          1
+        ],
+        "tolerance": [
+          3
+        ],
+        "w_abs": [
+          4.0
+        ],
+        "w_trap": [
+          1.0
+        ],
+        "w_delta": [
+          1.0
+        ],
+        "w_imb": [
+          1.0
+        ],
+        "volume_weight": [
+          1.0
+        ],
+        "sensitivity": [
+          2
+        ]
+      },
+      "execution": {
+        "sl": [
+          24,
+          56
+        ],
+        "tp": [
+          68,
+          136
+        ],
+        "min_score": [
+          0.03,
+          0.06,
+          0.17
+        ],
+        "trailing": [
+          0
+        ],
+        "trail_trigger": [
+          20
+        ],
+        "be_trigger": [
+          0
+        ],
+        "be_offset": [
+          0
+        ],
+        "quantity": [
+          1
+        ]
+      },
+      "weight_profiles": [
+        {
+          "w_abs": 1,
+          "w_trap": 1,
+          "w_delta": 1,
+          "w_imb": 1
+        },
+        {
+          "w_abs": 1,
+          "w_trap": 1,
+          "w_delta": 1,
+          "w_imb": 4
+        },
+        {
+          "w_abs": 1,
+          "w_trap": 1,
+          "w_delta": 4,
+          "w_imb": 1
+        },
+        {
+          "w_abs": 1,
+          "w_trap": 1,
+          "w_delta": 4,
+          "w_imb": 4
+        },
+        {
+          "w_abs": 1,
+          "w_trap": 4,
+          "w_delta": 1,
+          "w_imb": 1
+        },
+        {
+          "w_abs": 1,
+          "w_trap": 4,
+          "w_delta": 1,
+          "w_imb": 4
+        },
+        {
+          "w_abs": 1,
+          "w_trap": 4,
+          "w_delta": 4,
+          "w_imb": 1
+        },
+        {
+          "w_abs": 1,
+          "w_trap": 4,
+          "w_delta": 4,
+          "w_imb": 4
+        },
+        {
+          "w_abs": 4,
+          "w_trap": 1,
+          "w_delta": 1,
+          "w_imb": 1
+        },
+        {
+          "w_abs": 4,
+          "w_trap": 1,
+          "w_delta": 1,
+          "w_imb": 4
+        },
+        {
+          "w_abs": 4,
+          "w_trap": 1,
+          "w_delta": 4,
+          "w_imb": 1
+        },
+        {
+          "w_abs": 4,
+          "w_trap": 1,
+          "w_delta": 4,
+          "w_imb": 4
+        },
+        {
+          "w_abs": 4,
+          "w_trap": 4,
+          "w_delta": 1,
+          "w_imb": 1
+        },
+        {
+          "w_abs": 4,
+          "w_trap": 4,
+          "w_delta": 1,
+          "w_imb": 4
+        },
+        {
+          "w_abs": 4,
+          "w_trap": 4,
+          "w_delta": 4,
+          "w_imb": 1
+        },
+        {
+          "w_abs": 0,
+          "w_trap": 1,
+          "w_delta": 1,
+          "w_imb": 1
+        },
+        {
+          "w_abs": 4,
+          "w_trap": 0,
+          "w_delta": 1,
+          "w_imb": 1
+        },
+        {
+          "w_abs": 4,
+          "w_trap": 1,
+          "w_delta": 0,
+          "w_imb": 1
+        },
+        {
+          "w_abs": 4,
+          "w_trap": 1,
+          "w_delta": 1,
+          "w_imb": 0
+        }
+      ],
+      "confirmations": [],
+      "combine_mode": "and",
+      "confirmation_bars": 0,
+      "bar_seconds": 60,
+      "method": "grid",
+      "min_trades": 200,
+      "min_active_days": 30,
+      "min_trades_per_training_block": 40,
+      "training_blocks": 3,
+      "validation_min_trades": 50,
+      "validation_min_active_days": 15,
+      "seed": 20261013,
+      "horizon": 30,
+      "commission": 5,
+      "entry_slip": 1,
+      "stop_slip": 1,
+      "exit_slip": 1,
+      "target_through": 1,
+      "delay_ms": 1,
+      "max_gap": 90,
+      "max_entry_gap": 5,
+      "level_filter": 0,
+      "flatten_seconds": 60900,
+      "available_data_only": true,
+      "exploratory_retest": true,
+      "calibrate_sensitivity": false,
+      "memory_reserve_gib": 2,
+      "research_label": "NQ V2 TO solo",
+      "trials": 2736
+    },
+    {
+      "data_folder": "C:\\SierraChart\\Data",
+      "instrument": "ES",
+      "start": "2025-04-01",
+      "end": "2026-09-30",
+      "indicator": "to_reversal",
+      "parameters": {
+        "min_agg": [
+          75,
+          200,
+          400
+        ],
+        "min_pct": [
+          8
+        ],
+        "level_multiple": [
+          1.5
+        ],
+        "diagonal": [
+          1.0
+        ],
+        "imbalance": [
+          3
+        ],
+        "extreme_ticks": [
+          2
+        ],
+        "rejection_ticks": [
+          1
+        ],
+        "close_through": [
+          0.0
+        ],
+        "bubbles": [
+          2.0
+        ],
+        "separation": [
+          3.0
+        ],
+        "trap_buffer": [
+          2.0
+        ],
+        "min_trapped": [
+          0.0
+        ],
+        "imbalance_volume": [
+          20.0
+        ],
+        "lookback": [
+          10,
+          30
+        ],
+        "require_extreme": [
+          0,
+          1
+        ],
+        "tolerance": [
+          1
+        ],
+        "w_abs": [
+          4.0
+        ],
+        "w_trap": [
+          1.0
+        ],
+        "w_delta": [
+          1.0
+        ],
+        "w_imb": [
+          1.0
+        ],
+        "volume_weight": [
+          1.0
+        ],
+        "sensitivity": [
+          2
+        ]
+      },
+      "execution": {
+        "sl": [
+          6,
+          13
+        ],
+        "tp": [
+          15,
+          30
+        ],
+        "min_score": [
+          0.03,
+          0.06,
+          0.16
+        ],
+        "trailing": [
+          0
+        ],
+        "trail_trigger": [
+          20
+        ],
+        "be_trigger": [
+          0
+        ],
+        "be_offset": [
+          0
+        ],
+        "quantity": [
+          1
+        ]
+      },
+      "weight_profiles": [
+        {
+          "w_abs": 1,
+          "w_trap": 1,
+          "w_delta": 1,
+          "w_imb": 1
+        },
+        {
+          "w_abs": 1,
+          "w_trap": 1,
+          "w_delta": 1,
+          "w_imb": 4
+        },
+        {
+          "w_abs": 1,
+          "w_trap": 1,
+          "w_delta": 4,
+          "w_imb": 1
+        },
+        {
+          "w_abs": 1,
+          "w_trap": 1,
+          "w_delta": 4,
+          "w_imb": 4
+        },
+        {
+          "w_abs": 1,
+          "w_trap": 4,
+          "w_delta": 1,
+          "w_imb": 1
+        },
+        {
+          "w_abs": 1,
+          "w_trap": 4,
+          "w_delta": 1,
+          "w_imb": 4
+        },
+        {
+          "w_abs": 1,
+          "w_trap": 4,
+          "w_delta": 4,
+          "w_imb": 1
+        },
+        {
+          "w_abs": 1,
+          "w_trap": 4,
+          "w_delta": 4,
+          "w_imb": 4
+        },
+        {
+          "w_abs": 4,
+          "w_trap": 1,
+          "w_delta": 1,
+          "w_imb": 1
+        },
+        {
+          "w_abs": 4,
+          "w_trap": 1,
+          "w_delta": 1,
+          "w_imb": 4
+        },
+        {
+          "w_abs": 4,
+          "w_trap": 1,
+          "w_delta": 4,
+          "w_imb": 1
+        },
+        {
+          "w_abs": 4,
+          "w_trap": 1,
+          "w_delta": 4,
+          "w_imb": 4
+        },
+        {
+          "w_abs": 4,
+          "w_trap": 4,
+          "w_delta": 1,
+          "w_imb": 1
+        },
+        {
+          "w_abs": 4,
+          "w_trap": 4,
+          "w_delta": 1,
+          "w_imb": 4
+        },
+        {
+          "w_abs": 4,
+          "w_trap": 4,
+          "w_delta": 4,
+          "w_imb": 1
+        },
+        {
+          "w_abs": 0,
+          "w_trap": 1,
+          "w_delta": 1,
+          "w_imb": 1
+        },
+        {
+          "w_abs": 4,
+          "w_trap": 0,
+          "w_delta": 1,
+          "w_imb": 1
+        },
+        {
+          "w_abs": 4,
+          "w_trap": 1,
+          "w_delta": 0,
+          "w_imb": 1
+        },
+        {
+          "w_abs": 4,
+          "w_trap": 1,
+          "w_delta": 1,
+          "w_imb": 0
+        }
+      ],
+      "confirmations": [],
+      "combine_mode": "and",
+      "confirmation_bars": 0,
+      "bar_seconds": 60,
+      "method": "grid",
+      "min_trades": 200,
+      "min_active_days": 30,
+      "min_trades_per_training_block": 40,
+      "training_blocks": 3,
+      "validation_min_trades": 50,
+      "validation_min_active_days": 15,
+      "seed": 20261013,
+      "horizon": 30,
+      "commission": 5,
+      "entry_slip": 1,
+      "stop_slip": 1,
+      "exit_slip": 1,
+      "target_through": 1,
+      "delay_ms": 1,
+      "max_gap": 90,
+      "max_entry_gap": 5,
+      "level_filter": 0,
+      "flatten_seconds": 60900,
+      "available_data_only": true,
+      "exploratory_retest": true,
+      "calibrate_sensitivity": false,
+      "memory_reserve_gib": 2,
+      "research_label": "ES V2 TO solo",
+      "trials": 2736
+    }
+  ]
+}
