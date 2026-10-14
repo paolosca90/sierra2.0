@@ -236,7 +236,7 @@ void HandleReplayCompletion(SCStudyInterfaceRef sc)
     else
     {
         OnChartLogging::AddLog(sc, "--- All combinations finished. Backtesting complete. ---");
-        ResultAnalyzer::AnalyzeResults(sc, resultsDir, resultsDir + reportFileName.str() + "-summary.csv");
+        ResultAnalyzer::AnalyzeResults(sc, resultsDir, resultsDir + "summary.csv");
         if (config->OpenResultsFolder)
         {
             ShellExecuteA(NULL, "open", resultsDir.c_str(), NULL, NULL, SW_SHOWNORMAL);

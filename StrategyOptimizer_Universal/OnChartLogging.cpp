@@ -19,14 +19,18 @@ namespace OnChartLogging
 
     void AddLog(SCStudyInterfaceRef sc, const SCString &message, const SCString &fontFace)
     {
+        sc.AddMessageToLog(message, 0);
+
         int &enableLog = sc.GetPersistentIntFast(PersistentVars::EnableLog);
         if (enableLog == 0)
             return;
 
-        sc.AddMessageToLog(message, 0);
         auto *logMessages = GetLogMessagesVector(sc);
         int &maxLogLines = sc.GetPersistentIntFast(PersistentVars::MaxLogLines);
-        if (logMessages->size() >= maxLogLines)
+        if (maxLogLines <= 0)
+            maxLogLines = 20;
+
+        if (logMessages->size() >= (size_t)maxLogLines)
         {
             logMessages->erase(logMessages->begin());
         }

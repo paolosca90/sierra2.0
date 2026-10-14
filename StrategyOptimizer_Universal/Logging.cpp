@@ -28,11 +28,14 @@ void Logging::LogMetrics(SCStudyInterfaceRef sc, const std::string &strategyName
     log << result.dump(4);
 
     // csv
-    std::stringstream fileNameStream;
-    fileNameStream
-        << reportPath << ".csv";
+    std::string csvPath = reportPath;
+    if (csvPath.size() >= 5 && csvPath.substr(csvPath.size() - 5) == ".json")
+    {
+        csvPath = csvPath.substr(0, csvPath.size() - 5);
+    }
+    csvPath += ".csv";
 
-    std::ofstream csvLog(fileNameStream.str(), std::ios::app);
+    std::ofstream csvLog(csvPath, std::ios::app);
     if (!csvLog.is_open())
         return;
 

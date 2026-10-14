@@ -171,7 +171,7 @@ std::string CombinationResult::ToCsvRow() const
        << totalProfitLoss << ","
        << profitFactor << ","
        << totalTrades << ","
-       << winningTradesPercentage * 100 << ","
+       << winningTradesPercentage << ","
        << maxDrawdown << ","
        << "\"" << sourceFile << "\"\n";
 

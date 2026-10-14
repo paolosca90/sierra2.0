@@ -86,16 +86,18 @@ namespace CombinationGenerator
             }
             else if (p.Increment > 0)
             {
-                for (double i = p.MinValue; i <= p.MaxValue + 1e-9; i += p.Increment)
+                int numSteps = static_cast<int>(std::floor((p.MaxValue - p.MinValue) / p.Increment + 1e-9));
+                for (int s = 0; s <= numSteps; ++s)
                 {
-                    values.push_back(i);
+                    values.push_back(p.MinValue + s * p.Increment);
                 }
             }
             else
             {
-                for (double i = p.MinValue; i >= p.MaxValue - 1e-9; i += p.Increment)
+                int numSteps = static_cast<int>(std::floor((p.MinValue - p.MaxValue) / std::fabs(p.Increment) + 1e-9));
+                for (int s = 0; s <= numSteps; ++s)
                 {
-                    values.push_back(i);
+                    values.push_back(p.MinValue + s * p.Increment);
                 }
             }
             paramValues.push_back(values);

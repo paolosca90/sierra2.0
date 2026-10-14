@@ -144,29 +144,19 @@ namespace StrategyOptimizerHelpers
         OnChartLogging::AddLog(sc, SCString(separator_ss.str().c_str()), fontFace);
 
         const auto &firstCombination = combinations->empty() ? std::vector<double>() : (*combinations)[0];
-        int varyingParamIndex = 0;
 
-        for (const auto &param : config->ParamConfigs)
+        for (size_t paramIndex = 0; paramIndex < config->ParamConfigs.size(); ++paramIndex)
         {
+            const auto &param = config->ParamConfigs[paramIndex];
             SCString inputName;
             sc.GetStudyInputName(sc.ChartNumber, studyId, param.Index, inputName);
             if (inputName.IsEmpty())
                 continue;
 
-            double value;
-            if (std::fabs(param.Increment) > 1e-9)
+            double value = param.MinValue;
+            if (paramIndex < firstCombination.size())
             {
-                if (varyingParamIndex < firstCombination.size())
-                {
-                    value = firstCombination[varyingParamIndex];
-                    varyingParamIndex++;
-                }
-                else
-                    continue;
-            }
-            else
-            {
-                value = param.MinValue;
+                value = firstCombination[paramIndex];
             }
 
             std::stringstream ss;
@@ -234,14 +224,14 @@ namespace StrategyOptimizerHelpers
         char buffer[256]; // Use a buffer to build the final string
         snprintf(buffer, sizeof(buffer), "%.*s.%s", (int)lengthWithoutExtension, fileNameChars, functionNameChars);
 
-        SCDateTime threeDaysAgo = sc.GetCurrentDateTime().SubtractDays(3);
+        SCDateTime defaultLookback = sc.GetCurrentDateTime().SubtractDays(180);
 
         nlohmann::ordered_json config;
         config["_customStudyFileAndFunctionName"] = buffer;
         config["openResultsFolder"] = true;
         config["replayConfig"] = {
             {"replaySpeed", 888},
-            {"startDate", sc.DateTimeToString(threeDaysAgo, FLAG_DT_COMPLETE_DATE).GetChars()},
+            {"startDate", sc.DateTimeToString(defaultLookback, FLAG_DT_COMPLETE_DATE).GetChars()},
             {"startTime", "00:00:00.000"},
             {"replayMode", 2},
             {"chartsToReplay", 0},

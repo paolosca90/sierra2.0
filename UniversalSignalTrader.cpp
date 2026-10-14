@@ -97,12 +97,12 @@ SCSFExport scsf_UniversalSignalTrader(SCStudyInterfaceRef sc)
        if(bull && s<MinimumScore.GetFloat()) bull=false;
        if(bear && -s<MinimumScore.GetFloat()) bear=false;
     }
-    if(bull && bear) return;
     s_SCPositionData pos;
     if(sc.GetTradePosition(pos)<=0) return;
     if(pos.PositionQuantity!=0){
+        if(openAtBar<0) openAtBar = closed;
         const bool opposite=(pos.PositionQuantity>0 && bear) || (pos.PositionQuantity<0 && bull);
-        const bool expired=MaxHoldBars.GetInt()>0 && openAtBar>=0 && closed-openAtBar>=MaxHoldBars.GetInt();
+        const bool expired=MaxHoldBars.GetInt()>0 && openAtBar>=0 && (closed-openAtBar)>=MaxHoldBars.GetInt();
         if((CloseOnOpposite.GetYesNo() && opposite)||expired){
             int r=sc.FlattenAndCancelAllOrders();
             if(r<=0){SCString m; m.Format("Universal Signal Trader: flatten rejected %d",r);sc.AddMessageToLog(m,1);}
@@ -110,6 +110,7 @@ SCSFExport scsf_UniversalSignalTrader(SCStudyInterfaceRef sc)
         }
         return;
     }
+    openAtBar=-1;
     if(pos.WorkingOrdersExist || bull==bear) return;
     s_SCNewOrder order;
     order.OrderQuantity=Quantity.GetInt();

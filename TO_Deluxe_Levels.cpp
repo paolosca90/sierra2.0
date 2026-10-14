@@ -891,12 +891,7 @@ SCSFExport scsf_TODeluxeLevels(SCStudyInterfaceRef sc)
 
         SetRangeValues(sc, BarIndex, State.Ranges, RangeConfigs);
 
-        // Keep the lines flat from the start of the trade date.
-        if (!Input_CausalResearch.GetYesNo() && RangeChanged && BarIndex > State.DayStartIndex)
-        {
-            BackfillRangeValues(sc, State.DayStartIndex, BarIndex - 1,
-                                State.Ranges, RangeConfigs);
-        }
+        // Historical backfilling has been completely disabled to guarantee strict causality and eliminate look-ahead bias.
 
         // --- accumulate this bar into the in-progress periods ---
         AccumulateBar(sc, BarIndex, State.Day,   UseVAPData, TicksPerLevel, TickSize);
@@ -967,11 +962,7 @@ SCSFExport scsf_TODeluxeLevels(SCStudyInterfaceRef sc)
             }
         }
 
-        if (!Input_CausalResearch.GetYesNo() && RangeChanged && LastBarIndex > RangeStartIndex)
-        {
-            BackfillRangeValues(sc, RangeStartIndex, LastBarIndex - 1,
-                                DisplayRanges, RangeConfigs);
-        }
+        // Causal enforcement: Range values are projected forward only, no retroactive rewriting.
     }
 
     // -----------------------------------------------------------------------
